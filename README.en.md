@@ -4,10 +4,10 @@
 
 [한국어](README.md) · **English**
 
-**Desktop character launcher for Windows**
+**A desktop character launcher, just for fun**
 
-Two characters stand at the bottom-center of your desktop. Click one to open its panel.
-When the market moves sharply — or when you've been idle for a while — they speak up first.
+A little buddy floats at the bottom-center of your desktop. Leave it alone and it breathes/sways;
+ignore it too long and it complains it's bored. Click it and a small panel pops up.
 
 <img src="assets/screenshot.png" width="640" alt="DeskBuddies running on the desktop" />
 
@@ -20,17 +20,19 @@ When the market moves sharply — or when you've been idle for a while — they 
 
 ---
 
-## ✨ At a glance
+## 🐣 What is this?
 
-| Character | What it opens |
-|---|---|
-| 🧑 **Trader** | A button that **launches your own Python auto-trading project** |
-| 👩 **Analyst** | A dashboard: **live prices (Upbit) + economic news + LLM chat** |
+A lightweight, toy-like app that puts a **mascot character** on your desktop.
+It isn't trying to do anything serious — I just wanted **a cute friend sitting on my desk**, so I made this launcher.
 
-- ⚡ **Price-spike alerts** — when a coin you track moves sharply in a short window, the Analyst tells you **first** via a speech bubble + OS notification.
-- 💬 **Idle banter** — when there's no mouse/keyboard input for a while, a character throws out a random one-liner.
-- 🪟 **Transparent background + lively animation** — frameless on the desktop, gently swaying/breathing even while idle.
-- 🔒 **API keys stay on your PC** — keys are saved only to a local config file and sent only to your chosen provider's API. No keys live in this repo.
+- 🪟 Floats on the desktop **transparently**, no frame or background
+- ✨ Gently **sways/breathes** even while idle; shows a speech bubble on hover
+- 💬 If there's no input for a while, it **blurts out a random line** about being bored
+- 🖱️ **Drag** the character to move it; ⚙ settings / ✕ quit at the top-right
+
+> The **Trader 🧑 and Analyst 👩 here are just sample characters.**
+> They're a demo to show "clicking a character could open a panel like this" — not serious features.
+> Swap them out and make your own buddy. 🙂
 
 ---
 
@@ -39,48 +41,39 @@ When the market moves sharply — or when you've been idle for a while — they 
 1. Grab `DeskBuddies.x.x.x.exe` from [**Releases**](https://github.com/nameismini/desk-buddies/releases/latest)
 2. Double-click. **No Node.js, no installer.** (portable exe)
 
-> On first run, if Windows SmartScreen shows a blue *"Windows protected your PC"* warning, click **More info → Run anyway**.
-> It's an unsigned personal build — that's expected and it works fine.
+> On first run, if Windows SmartScreen shows the blue *"Windows protected your PC"* warning, click **More info → Run anyway**.
+> It's an unsigned personal build — expected, and it works fine.
 
 ---
 
-## 🛠 Run from source (developers)
+## 🎨 Make it your own
+
+The fun is in **customizing it**.
+
+- **Swap characters**: replace `assets/male_2.png` / `assets/female_2.png` with any transparent PNG.
+- **Lines & banter**: edit the dialogue arrays in `overlay.html` to make it say whatever you want.
+- **Click-to-open panels**: edit `dashboard.html` / `trader.html` for your own purposes.
+
+### What do the sample panels do? (just examples)
+| Sample character | On click (demo) |
+|---|---|
+| 🧑 Trader | A button that runs an external program you configured (e.g. a Python script) |
+| 👩 Analyst | Shows public Upbit prices + econ news, plus LLM chat if you add a key |
+
+These are only "here's something you *could* wire up to a character" examples. Ignore them if you like.
+
+---
+
+## 🛠 Run from source / build (developers)
 
 Install [Node.js LTS](https://nodejs.org), then in this folder:
 
 ```bash
 npm install   # first time only (downloads Electron)
 npm start     # run the app
+
+npm run dist  # creates a portable exe in dist/
 ```
-
-Build your own portable exe:
-
-```bash
-npm run dist  # creates a single exe in dist/
-```
-
----
-
-## ⚙️ Configuration
-
-### 👩 Analyst (market chat)
-Click the female character → ⚙ (top-right) →
-
-- Enter **LLM provider / model / API key**, then save to enable chat.
-  - Anthropic example: model `claude-haiku-4-5-20251001`
-  - OpenAI example: model `gpt-4o-mini`
-- **Markets**: Upbit codes (`KRW-BTC,KRW-ETH,KRW-SOL` …) — shown via the public API, no key needed.
-- **Alert sensitivity (%)**: if a coin moves more than this within 15s, the character alerts you (default 0.8%).
-
-### 🧑 Trader (auto-trading launcher)
-Click the male character →
-
-- **Python executable**: usually `python` or `py`
-- **Entry script path**: e.g. `C:\projects\autotrade\main.py`
-- **Arguments** (optional): e.g. `--mode live`
-- Save, then hit **▶ Run** to spawn that Python project as a new process.
-
-> This launcher only **starts** the process. Trading logic, exchange keys, and risk management all live in your Python project.
 
 ---
 
@@ -88,21 +81,20 @@ Click the male character →
 
 | File | Role |
 |---|---|
-| `main.js` | Electron main — windows, Python spawn, news fetch, LLM calls, idle detection |
-| `preload.js` | Safe renderer ↔ main bridge (`contextIsolation`) |
-| `overlay.html` | The on-desktop characters + animation + spike/idle banter |
-| `dashboard.html` | Analyst (prices · news · chat) panel |
-| `trader.html` | Trader (auto-trading launcher) panel |
-| `assets/` | Character images (`male_2.png`, `female_2.png` — swap freely) |
+| `main.js` | Electron main — windows, idle detection, (sample) external launch/news/LLM calls |
+| `preload.js` | Safe renderer ↔ main bridge |
+| `overlay.html` | The on-desktop character + animation + banter |
+| `dashboard.html` · `trader.html` | **Sample panels** that open on click |
+| `assets/` | Character images (swap them out) |
 
 ---
 
-## ⚠️ Disclaimer
+## ⚠️ Note
 
-Real-money auto-trading can lose money from a single line of buggy code.
-This launcher only runs an external Python program and takes **no responsibility** for trading outcomes.
-Validate thoroughly (**paper trading → small live trades**) before relying on it.
+The sample Trader panel is a "run an external program" demo, so if you actually wire up a real
+auto-trading script, it really will run it. That's entirely **your own responsibility** — this launcher
+just shows a character and presses a button.
 
 ## 📄 License
 
-[MIT](LICENSE) — use, modify, and distribute freely.
+[MIT](LICENSE) — use it, hack it, and build your own desk buddy. 🐥
