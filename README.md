@@ -2,13 +2,14 @@
 
 # 🧑‍💻 DeskBuddies 👩‍💻
 
+**한국어** · [English](README.en.md)
+
 **윈도우 바탕화면에 떠 있는 캐릭터 런처**
 
 두 캐릭터가 화면 가운데 아래에 서 있고, 클릭하면 각자의 기능이 열립니다.
 시세가 급변하거나 한동안 가만히 있으면 캐릭터가 먼저 말을 걸어요.
 
-<img src="assets/male_2.png" width="150" alt="트레이더" />
-<img src="assets/female_2.png" width="150" alt="애널리스트" />
+<img src="assets/screenshot.png" width="640" alt="DeskBuddies 실행 화면" />
 
 ![platform](https://img.shields.io/badge/platform-Windows-blue)
 ![release](https://img.shields.io/github/v/release/nameismini/desk-buddies)
