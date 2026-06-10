@@ -1,0 +1,13 @@
+# 의존성 (npm install로 재생성)
+node_modules/
+
+# 빌드 산출물 (exe는 GitHub Release로 배포)
+dist/
+
+# 로그 / 임시
+*.log
+npm-debug.log*
+
+# OS
+Thumbs.db
+.DS_Store

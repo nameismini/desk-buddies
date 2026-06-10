@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>시황 대시보드</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+    background: #0f1115; color: #e8eaf0; height: 100vh;
+    display: flex; flex-direction: column; font-size: 13px;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    background: linear-gradient(135deg, #1b1e26, #14161c); border-bottom: 1px solid #23262f;
+  }
+  header img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background:#222; }
+  header .t { font-weight: 700; font-size: 15px; }
+  header .s { font-size: 11px; color: #8b90a0; }
+  .gear { margin-left: auto; background: none; border: none; color: #8b90a0; font-size: 16px; cursor: pointer; }
+
+  .scroll { flex: 1; overflow-y: auto; padding: 12px 14px; }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #828799; margin: 14px 2px 6px; font-weight: 700; }
+
+  /* 시세 */
+  .ticker { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 9px; background: #171a21; margin-bottom: 5px; }
+  .ticker .sym { font-weight: 700; }
+  .ticker .px { text-align: right; }
+  .ticker .rate { font-size: 11px; font-weight: 600; }
+  .up { color: #ff5a5a; } .down { color: #4d8dff; } .flat { color: #9aa0b0; }
+
+  /* 뉴스 */
+  .news { display: block; padding: 7px 10px; border-radius: 8px; color: #d7dae3; text-decoration: none; margin-bottom: 4px; line-height: 1.4; }
+  .news:hover { background: #171a21; }
+  .news .d { font-size: 10px; color: #6f7484; }
+
+  /* 챗 */
+  #chat { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; }
+  .msg { max-width: 85%; padding: 8px 11px; border-radius: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .me { align-self: flex-end; background: #2d6cff; color: #fff; border-bottom-right-radius: 4px; }
+  .ai { align-self: flex-start; background: #1d2129; border-bottom-left-radius: 4px; }
+  .composer { display: flex; gap: 8px; padding: 10px 14px; border-top: 1px solid #23262f; background: #12141a; }
+  .composer input { flex: 1; background: #1d2129; border: 1px solid #2a2e39; color: #fff; border-radius: 10px; padding: 9px 12px; font-size: 13px; outline: none; }
+  .composer button { background: #2d6cff; border: none; color: #fff; border-radius: 10px; padding: 0 16px; font-weight: 700; cursor: pointer; }
+  .composer button:disabled { opacity: .5; cursor: default; }
+
+  /* 설정 */
+  #settings { display: none; padding: 14px; background: #12141a; border-top: 1px solid #23262f; }
+  #settings.open { display: block; }
+  #settings label { display: block; font-size: 11px; color: #9aa0b0; margin: 8px 0 3px; }
+  #settings input, #settings select { width: 100%; background: #1d2129; border: 1px solid #2a2e39; color: #fff; border-radius: 8px; padding: 7px 10px; font-size: 12px; }
+  #settings .save { margin-top: 12px; width: 100%; background: #2d6cff; border: none; color: #fff; padding: 9px; border-radius: 9px; font-weight: 700; cursor: pointer; }
+  .hint { font-size: 10px; color: #6f7484; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <header>
+    <img src="assets/female_2.png" alt="" />
+    <div>
+      <div class="t">애널리스트</div>
+      <div class="s">실시간 시황 · 경제뉴스 비서</div>
+    </div>
+    <button class="gear" id="gear" title="설정">⚙</button>
+  </header>
+
+  <div class="scroll">
+    <div class="section-title">실시간 시세 (업비트)</div>
+    <div id="tickers"><div class="ticker"><span class="sym">로딩 중…</span></div></div>
+
+    <div class="section-title">경제 뉴스</div>
+    <div id="news"><div class="news">뉴스 불러오는 중…</div></div>
+
+    <div class="section-title">대화</div>
+    <div id="chat">
+      <div class="msg ai">안녕하세요! 오늘 시장이 궁금하시면 물어보세요. 예: "지금 비트코인 어때?", "오늘 경제뉴스 3줄 요약해줘"</div>
+    </div>
+  </div>
+
+  <div id="settings">
+    <label>LLM 제공자</label>
+    <select id="provider">
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="openai">OpenAI</option>
+    </select>
+    <label>모델</label>
+    <input id="model" placeholder="claude-haiku-4-5-20251001" />
+    <label>API 키 (이 PC에만 저장됩니다)</label>
+    <input id="apikey" type="password" placeholder="sk-... / 키 입력" />
+    <label>시세 마켓 (쉼표 구분, 업비트 코드)</label>
+    <input id="markets" placeholder="KRW-BTC,KRW-ETH,KRW-XRP" />
+    <label>급변 알림 민감도 (%) — 15초 사이 이 폭 이상 움직이면 캐릭터가 알림</label>
+    <input id="alert" type="number" step="0.1" min="0.1" placeholder="0.8" />
+    <button class="save" id="save">저장</button>
+    <div class="hint">키는 외부로 전송되지 않고 로컬 설정 파일에만 저장돼요. 챗 사용 시 선택한 제공자 API로만 전달됩니다.</div>
+  </div>
+
+  <div class="composer">
+    <input id="input" placeholder="메시지를 입력하세요…" />
+    <button id="send">전송</button>
+  </div>
+
+<script>
+  let cfg = null;
+  let lastTickers = [];
+  const $ = (id) => document.getElementById(id);
+
+  async function init() {
+    cfg = await window.api.getConfig();
+    $('provider').value = cfg.llmProvider || 'anthropic';
+    $('model').value = cfg.llmModel || '';
+    $('apikey').value = cfg.llmApiKey || '';
+    $('markets').value = (cfg.markets || []).join(',');
+    $('alert').value = (typeof cfg.alertThreshold === 'number') ? cfg.alertThreshold : 0.8;
+    loadTickers();
+    loadNews();
+    setInterval(loadTickers, 10000);
+  }
+
+  // ---- 시세 (업비트 공개 API, 렌더러에서 직접 호출) ----
+  async function loadTickers() {
+    const markets = (cfg.markets && cfg.markets.length) ? cfg.markets : ['KRW-BTC','KRW-ETH'];
+    try {
+      const res = await fetch('https://api.upbit.com/v1/ticker?markets=' + markets.join(','));
+      const data = await res.json();
+      lastTickers = data;
+      $('tickers').innerHTML = data.map(d => {
+        const rate = (d.signed_change_rate * 100);
+        const cls = rate > 0 ? 'up' : rate < 0 ? 'down' : 'flat';
+        const arrow = rate > 0 ? '▲' : rate < 0 ? '▼' : '–';
+        const sym = d.market.replace('KRW-', '');
+        return `<div class="ticker">
+          <span class="sym">${sym}</span>
+          <span class="px">${d.trade_price.toLocaleString('ko-KR')}원
+            <span class="rate ${cls}">${arrow} ${Math.abs(rate).toFixed(2)}%</span>
+          </span></div>`;
+      }).join('');
+    } catch (e) {
+      $('tickers').innerHTML = '<div class="ticker"><span class="sym">시세 로드 실패 (인터넷 확인)</span></div>';
+    }
+  }
+
+  // ---- 뉴스 (메인 프로세스에서 수집) ----
+  async function loadNews() {
+    try {
+      const items = await window.api.getNews();
+      if (!items.length) { $('news').innerHTML = '<div class="news">뉴스를 불러오지 못했어요.</div>'; return; }
+      $('news').innerHTML = items.map(n =>
+        `<a class="news" href="#" data-url="${n.link}">${n.title}<div class="d">${n.date || ''}</div></a>`
+      ).join('');
+      document.querySelectorAll('.news[data-url]').forEach(a => {
+        a.addEventListener('click', (e) => { e.preventDefault(); window.api.openExternal(a.dataset.url); });
+      });
+    } catch { $('news').innerHTML = '<div class="news">뉴스를 불러오지 못했어요.</div>'; }
+  }
+
+  // ---- 챗 ----
+  const history = [];
+  function addMsg(role, text) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + (role === 'user' ? 'me' : 'ai');
+    div.textContent = text;
+    $('chat').appendChild(div);
+    div.scrollIntoView({ behavior: 'smooth' });
+    return div;
+  }
+
+  function buildContext() {
+    const t = lastTickers.map(d => `${d.market.replace('KRW-','')}: ${d.trade_price.toLocaleString('ko-KR')}원 (${(d.signed_change_rate*100).toFixed(2)}%)`).join('\n');
+    const news = Array.from(document.querySelectorAll('#news .news')).slice(0,10).map(a => '- ' + a.childNodes[0].textContent).join('\n');
+    return `실시간 시세:\n${t}\n\n최신 경제뉴스 헤드라인:\n${news}`;
+  }
+
+  async function send() {
+    const text = $('input').value.trim();
+    if (!text) return;
+    $('input').value = '';
+    $('send').disabled = true;
+    addMsg('user', text);
+    history.push({ role: 'user', content: text });
+    const thinking = addMsg('assistant', '…');
+    const r = await window.api.chat({ messages: history, context: buildContext() });
+    thinking.textContent = r.text;
+    if (r.ok) history.push({ role: 'assistant', content: r.text });
+    $('send').disabled = false;
+    $('input').focus();
+  }
+  $('send').addEventListener('click', send);
+  $('input').addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+
+  // ---- 설정 ----
+  $('gear').addEventListener('click', () => $('settings').classList.toggle('open'));
+  $('save').addEventListener('click', async () => {
+    cfg.llmProvider = $('provider').value;
+    cfg.llmModel = $('model').value.trim();
+    cfg.llmApiKey = $('apikey').value.trim();
+    cfg.markets = $('markets').value.split(',').map(s => s.trim()).filter(Boolean);
+    const at = parseFloat($('alert').value);
+    cfg.alertThreshold = (!isNaN(at) && at > 0) ? at : 0.8;
+    await window.api.saveConfig(cfg);
+    $('settings').classList.remove('open');
+    loadTickers();
+  });
+
+  init();
+</script>
+</body>
+</html>
