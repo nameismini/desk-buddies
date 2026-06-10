@@ -50,7 +50,34 @@ It isn't trying to do anything serious — I just wanted **a cute friend sitting
 
 The fun is in **customizing it**.
 
-- **Swap characters**: replace `assets/male_2.png` / `assets/female_2.png` with any transparent PNG.
+### 🧍 Swap in your own character (the #1 question!)
+
+The character art is just **these two files**. Replace them and your own buddy shows up. 👇
+
+```
+assets/
+├── male_2.png      ← left character (Trader)
+└── female_2.png    ← right character (Analyst)
+```
+
+**Easiest way — overwrite with the same filename:**
+1. Prepare your image. Only one requirement — a **PNG with a transparent background**.
+   (Just the character, no background, so it floats naturally on the desktop. Roughly square, 400px+ recommended — it's shown at 130px.)
+2. Rename your image to the filenames above and drop it into `assets/`, overwriting. Done — no code changes needed.
+
+> 💡 Image has a white/solid background? Remove it at a site like [remove.bg](https://www.remove.bg), save as a **transparent PNG**, then use that.
+
+**Want different filenames or labels?** Edit just this part in `overlay.html`:
+```html
+<img src="assets/male_2.png" alt="Trader" />   <!-- ← image path -->
+<div class="name">트레이더</div>                <!-- ← name label -->
+```
+(The small image at the top of each click-to-open panel lives in `dashboard.html` / `trader.html` as `<img src="assets/...">`.)
+
+> ⚠️ **Using the exe?** Images are bundled inside it, so after swapping you must **rebuild** with `npm run dist`.
+> When running from source (`npm start`), changes apply immediately.
+
+### Also
 - **Lines & banter**: edit the dialogue arrays in `overlay.html` to make it say whatever you want.
 - **Click-to-open panels**: edit `dashboard.html` / `trader.html` for your own purposes.
 
