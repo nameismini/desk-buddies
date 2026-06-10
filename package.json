@@ -1,0 +1,25 @@
+{
+  "name": "desk-buddies",
+  "version": "0.1.0",
+  "description": "윈도우 바탕화면에 떠 있는 캐릭터 런처 (트레이딩 + 시황 대시보드)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "author": "mkim",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "kr.aromatica.deskbuddies",
+    "productName": "DeskBuddies",
+    "files": ["**/*"],
+    "win": {
+      "target": "portable",
+      "icon": "assets/female_2.png"
+    }
+  }
+}

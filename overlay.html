@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+  html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; -webkit-user-drag: none; }
+  body { font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif; }
+
+  #stage {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  /* 상단 컨트롤 (호버 시 표시) */
+  #controls {
+    align-self: center; margin: 0 0 4px 0;
+    display: flex; gap: 6px; opacity: 0; transition: opacity .2s;
+    -webkit-app-region: no-drag;
+  }
+  #stage:hover #controls { opacity: 1; }
+  .ctrl {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(20,22,28,.7); color: #cfd3dc; border: none;
+    font-size: 12px; cursor: pointer; display: grid; place-items: center;
+    backdrop-filter: blur(6px);
+  }
+  .ctrl:hover { background: rgba(40,44,54,.9); color: #fff; }
+
+  /* 드래그 핸들(빈 공간) */
+  #drag { position: absolute; inset: 0; -webkit-app-region: drag; }
+
+  #buddies { display: flex; align-items: flex-end; gap: 0; z-index: 2; }
+
+  .buddy { position: relative; -webkit-app-region: no-drag; cursor: pointer; text-align: center; }
+  .buddy + .buddy { margin-left: -18px; }   /* 둘이 살짝 겹치게 붙임 */
+  .buddy:hover { z-index: 20; }             /* 호버한 캐릭터(+말풍선)를 맨 앞으로 */
+
+  /* sprite = 애니메이션 레이어(살아있는 흔들림/숨쉬기), img = 호버 확대 */
+  .sprite { display: inline-block; animation: idleAlive 4s ease-in-out infinite; transform-origin: 50% 100%; }
+  .buddy:nth-child(2) .sprite { animation-delay: 1.0s; animation-duration: 4.4s; }
+  .buddy img {
+    width: 130px; height: 130px; object-fit: contain; -webkit-user-drag: none;
+    filter: drop-shadow(0 8px 10px rgba(0,0,0,.45));
+    transition: transform .15s ease;
+  }
+  .buddy:hover img { transform: scale(1.06); }
+
+  /* 가만히 있을 때: 몸을 좌우로 살짝 기울이며(무게중심=발) 숨쉬듯 폭이 변함 → '살아있는' 느낌 */
+  @keyframes idleAlive {
+    0%   { transform: rotate(-1.4deg) scale(1, 1); }
+    25%  { transform: rotate(0deg)    scale(1.012, 0.99); }
+    50%  { transform: rotate(1.4deg)  scale(1, 1); }
+    75%  { transform: rotate(0deg)    scale(1.012, 0.99); }
+    100% { transform: rotate(-1.4deg) scale(1, 1); }
+  }
+  /* 말할 때: 빠르게 까딱까딱 + 살짝 갸웃 */
+  @keyframes talk {
+    0%   { transform: translateY(0)    rotate(0deg); }
+    25%  { transform: translateY(-4px) rotate(2deg); }
+    50%  { transform: translateY(0)    rotate(0deg); }
+    75%  { transform: translateY(-4px) rotate(-2deg); }
+    100% { transform: translateY(0)    rotate(0deg); }
+  }
+  .buddy.talking .sprite { animation: talk .42s ease-in-out infinite; }
+
+  /* 알림 순간 한 번 통 튀기 */
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.22) translateY(-8px); }
+    70%  { transform: scale(.97); }
+    100% { transform: scale(1); }
+  }
+  .buddy.pop img { animation: pop .55s ease; }
+
+  /* 말풍선 */
+  .bubble {
+    position: absolute; bottom: 146px; left: 50%; transform: translateX(-50%) scale(.9);
+    z-index: 30;                              /* 캐릭터 위로 올려 가리지 않게 */
+    background: #fff; color: #1d1f25; padding: 6px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 600; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: all .18s ease;
+    box-shadow: 0 6px 16px rgba(0,0,0,.3); max-width: 220px;
+  }
+  .bubble::after {
+    content: ""; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: #fff; border-bottom: 0;
+  }
+  .buddy:hover .bubble,
+  .buddy .bubble.show { opacity: 1; transform: translateX(-50%) scale(1); }
+  /* 알림 말풍선은 색을 다르게 (급등=초록, 급락=빨강) */
+  .bubble.show.up   { background: #16c784; color: #fff; }
+  .bubble.show.up::after   { border-top-color: #16c784; }
+  .bubble.show.down { background: #ff5a5a; color: #fff; }
+  .bubble.show.down::after { border-top-color: #ff5a5a; }
+
+  .name { font-size: 11px; color: #e8eaf0; margin-top: 2px; text-shadow: 0 1px 3px rgba(0,0,0,.8); font-weight: 600; }
+
+  /* 책상/받침 */
+  #desk {
+    width: 250px; height: 16px; margin-top: -6px;
+    background: linear-gradient(180deg, rgba(60,64,76,.55), rgba(30,32,40,.35));
+    border-radius: 50%/14px; filter: blur(1px); z-index: 1;
+  }
+</style>
+</head>
+<body>
+  <div id="drag"></div>
+  <div id="stage">
+    <div id="controls">
+      <button class="ctrl" id="settings" title="설정">⚙</button>
+      <button class="ctrl" id="quit" title="종료">✕</button>
+    </div>
+    <div id="buddies">
+      <div class="buddy" id="buddy-trader" data-panel="trader" data-bubble="📈 자동매매 실행">
+        <div class="bubble">📈 자동매매 실행</div>
+        <span class="sprite"><img src="assets/male_2.png" alt="트레이더" /></span>
+        <div class="name">트레이더</div>
+      </div>
+      <div class="buddy" id="buddy-analyst" data-panel="dashboard" data-bubble="📊 시황 · 뉴스 챗">
+        <div class="bubble">📊 시황 · 뉴스 챗</div>
+        <span class="sprite"><img src="assets/female_2.png" alt="애널리스트" /></span>
+        <div class="name">애널리스트</div>
+      </div>
+    </div>
+    <div id="desk"></div>
+  </div>
+
+<script>
+  // ---- 패널 열기 / 컨트롤 ----
+  document.querySelectorAll('.buddy').forEach(b => {
+    b.addEventListener('click', () => window.api.openPanel(b.dataset.panel));
+  });
+  document.getElementById('settings').addEventListener('click', () => window.api.openPanel('dashboard'));
+  document.getElementById('quit').addEventListener('click', () => window.api.quitApp());
+
+  // ---- 캐릭터 말풍선 + 애니메이션 ----
+  function speak(buddyId, text, dirClass, ms = 6000) {
+    const buddy = document.getElementById(buddyId);
+    if (!buddy) return;
+    const bubble = buddy.querySelector('.bubble');
+    bubble.textContent = text;
+    bubble.classList.remove('up', 'down');
+    if (dirClass) bubble.classList.add(dirClass);
+    bubble.classList.add('show');
+    buddy.classList.add('talking', 'pop');
+    setTimeout(() => buddy.classList.remove('pop'), 600);
+    clearTimeout(buddy._sayTimer);
+    buddy._sayTimer = setTimeout(() => {
+      bubble.classList.remove('show', 'up', 'down');
+      buddy.classList.remove('talking');
+      bubble.textContent = buddy.dataset.bubble;   // 기본 문구 복원
+    }, ms);
+  }
+
+  // ---- 시세 급변 감지 → 애널리스트가 먼저 알림 ----
+  let markets = ['KRW-BTC', 'KRW-ETH'];
+  let threshold = 0.8;          // 폴링 간격 사이 절대 변동률(%)
+  const POLL_MS = 15000;
+  const lastPrice = {};         // market -> 직전 가격
+  let cooling = false;          // 연속 알림 방지(쿨다운)
+
+  async function loadCfg() {
+    try {
+      const cfg = await window.api.getConfig();
+      if (cfg.markets && cfg.markets.length) markets = cfg.markets;
+      if (typeof cfg.alertThreshold === 'number' && cfg.alertThreshold > 0) threshold = cfg.alertThreshold;
+    } catch {}
+  }
+
+  async function pollPrices() {
+    try {
+      const res = await fetch('https://api.upbit.com/v1/ticker?markets=' + markets.join(','));
+      const data = await res.json();
+      let biggest = null;
+      for (const d of data) {
+        const prev = lastPrice[d.market];
+        const px = d.trade_price;
+        if (prev) {
+          const move = (px - prev) / prev * 100;   // 직전 폴링 대비 변동률
+          if (Math.abs(move) >= threshold &&
+              (!biggest || Math.abs(move) > Math.abs(biggest.move))) {
+            biggest = { market: d.market, move, px };
+          }
+        }
+        lastPrice[d.market] = px;
+      }
+      if (biggest && !cooling) alertMove(biggest);
+    } catch { /* 네트워크 실패는 조용히 무시 */ }
+  }
+
+  function alertMove({ market, move, px }) {
+    cooling = true;
+    setTimeout(() => { cooling = false; }, POLL_MS + 1000);   // 한 번 알리면 잠시 쉼
+    const sym = market.replace('KRW-', '');
+    const up = move > 0;
+    const word = up ? '급등' : '급락';
+    const emoji = up ? '🚀' : '⚠️';
+    const sign = up ? '+' : '';
+    const text = `${emoji} ${sym} ${word} ${sign}${move.toFixed(2)}%`;
+    speak('buddy-analyst', text, up ? 'up' : 'down', 7000);
+    // 화면을 안 보고 있어도 알 수 있게 OS 알림도 함께
+    window.api.notify({
+      title: `시세 급변 · ${sym} ${word}`,
+      body: `${sign}${move.toFixed(2)}%  →  ${px.toLocaleString('ko-KR')}원`
+    });
+  }
+
+  // ---- 심심할 때(입력 없을 때) 캐릭터가 웃긴 잡담 ----
+  const IDLE_TRIGGER = 40;          // 이 초만큼 입력 없으면 '심심함'
+  const CHATTER_COOLDOWN = 30000;   // 잡담 사이 최소 간격(ms)
+  let lastChatter = 0;
+  let wasIdle = false;
+
+  const LINES = {
+    'buddy-trader': [
+      '사장님… 저 언제 일해요? 🥱',
+      '차트 안 보는 사이에 떡상하면 어떡하죠 😱',
+      '익절은 짧게, 손절은… 안 할래요.',
+      '자동매매 켜두고 주무세요. 제가 다 합니다 (아마도요).',
+      '심심한데 봇이라도 한 판 돌릴까요?',
+      '커피 한 잔의 여유… 그러다 물리는 거예요.',
+      '저 지금 차트 보는 척하고 멍때리는 중이에요.',
+      '존버는 승리한다… 던져봅니다.'
+    ],
+    'buddy-analyst': [
+      '여보세요~ 거기 누구 없어요? 👀',
+      '시장은 안 자는데 사장님은 주무시네요 💤',
+      '비트코인은 오늘도 열심히 비트코인을 합니다.',
+      '뉴스 다 읽었어요. 이제 저 뭐하죠?',
+      '지금 매수하면… 아, 아니에요. 말 안 할래요.',
+      '차 한잔 하실래요? 전 데이터만 마셔요 ☕',
+      '마우스 어디 갔어요…? 저 외로워요.',
+      '“이번엔 다르다”… 라고 다들 말하죠.'
+    ]
+  };
+  const BACK = [
+    '오, 돌아오셨네요! 👋',
+    '어디 갔다 오셨어요 ㅎㅎ',
+    '기다렸잖아요~',
+    '복귀 환영합니다, 사장님!'
+  ];
+
+  const isTalking = (id) => {
+    const b = document.getElementById(id);
+    return b && b.classList.contains('talking');
+  };
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  async function idleLoop() {
+    let idle = 0;
+    try { idle = await window.api.getIdle(); } catch {}
+    const now = Date.now();
+    if (idle >= IDLE_TRIGGER) {
+      // 잡담: 쿨다운 지났고, 시세 알림 중이 아니고, 아무도 말하는 중이 아닐 때
+      if (now - lastChatter > CHATTER_COOLDOWN && !cooling &&
+          !isTalking('buddy-trader') && !isTalking('buddy-analyst')) {
+        lastChatter = now;
+        const id = Math.random() < 0.5 ? 'buddy-trader' : 'buddy-analyst';
+        speak(id, pick(LINES[id]), null, 5500);
+      }
+      wasIdle = true;
+    } else {
+      // 막 돌아왔을 때 가끔 반겨주기
+      if (wasIdle && now - lastChatter > 6000 && Math.random() < 0.6 &&
+          !isTalking('buddy-trader') && !isTalking('buddy-analyst')) {
+        lastChatter = now;
+        speak('buddy-trader', pick(BACK), null, 4000);
+      }
+      wasIdle = false;
+    }
+  }
+
+  (async () => {
+    await loadCfg();
+    pollPrices();                       // 첫 호출은 기준값만 저장
+    setInterval(pollPrices, POLL_MS);
+    setInterval(loadCfg, 60000);        // 설정 변경(마켓/임계값) 주기적 반영
+    setInterval(idleLoop, 8000);        // 8초마다 유휴 상태 확인
+  })();
+</script>
+</body>
+</html>
